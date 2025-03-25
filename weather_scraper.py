@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 import csv
 from datetime import datetime
 import re
+import os
 
 # Month name mapping (Slovak to English and numeric)
 MONTH_MAPPING = {
@@ -109,36 +110,64 @@ def scrape_html(url):
         print(f"Failed to retrieve the webpage. Status code: {response.status_code}")
         return None
 
-def generate_urls(base_url, data_type, start_year, end_year):
-    """Generate URLs for the given range of years and data type"""
-    return [f"{base_url}data.php?year={year}&data={data_type}" for year in range(start_year, end_year + 1)]
+def generate_urls(base_url, data_types, start_year, end_year):
+    """Generate URLs for the given range of years and data types"""
+    urls = []
+    for year in range(start_year, end_year + 1):
+        for data_type in data_types:
+            urls.append(f"{base_url}data.php?year={year}&data={data_type}")
+    return urls
 
 if __name__ == "__main__":
     base_url = "https://www.pocasiebrezno.sk/"
-    data_type = "mintemp"  # Options: mintemp, maxtemp, rainfall, etc.
+    data_types = [
+        "maxtemp", "mintemp", "avgtemp", "heatdex", "highapp", "lowapp", 
+        "highdew", "lowdew", "rainfall", "rainhour", "rainrate", "maxpres", 
+        "minpres", "windchill", "windgust", "windspeed", "windrun", 
+        "maxhum", "minhum"
+    ]
     start_year = 2014
-    end_year = 2024
+    end_year = 2025
     
-    urls = generate_urls(base_url, data_type, start_year, end_year)
-    all_entries = []
+    # Create output directory if it doesn't exist
+    output_dir = "weather_data"
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
     
+    # Group URLs by data type
+    data_type_urls = {}
+    for data_type in data_types:
+        data_type_urls[data_type] = []
+    
+    urls = generate_urls(base_url, data_types, start_year, end_year)
     for url in urls:
-        entries = scrape_html(url)
-        if entries:
-            all_entries.extend(entries)
-            print(f"Scraped {len(entries)} entries from {url}")
-        else:
-            print(f"No entries found for {url}")
+        data_type_match = re.search(r'data=(\w+)', url)
+        if data_type_match:
+            data_type = data_type_match.group(1)
+            data_type_urls[data_type].append(url)
     
-    if all_entries:
-        # Sort entries by date
-        all_entries.sort(key=lambda x: datetime.strptime(x["date"], "%d.%m.%Y"))
+    # Process each data type separately
+    for data_type, type_urls in data_type_urls.items():
+        print(f"\nProcessing data type: {data_type}")
+        data_type_entries = []
         
-        output_file = f'weather_scraped_{data_type}.csv'
-        with open(output_file, mode='w', newline='', encoding='utf-8') as file:
-            writer = csv.DictWriter(file, fieldnames=["date", "value", "data_type"])
-            writer.writeheader()
-            writer.writerows(all_entries)
-            print(f"Saved {len(all_entries)} entries to {output_file}")
-    else:
-        print("No data was scraped.")
+        for url in type_urls:
+            entries = scrape_html(url)
+            if entries:
+                data_type_entries.extend(entries)
+                print(f"Scraped {len(entries)} entries from {url}")
+            else:
+                print(f"No entries found for {url}")
+        
+        if data_type_entries:
+            # Sort entries by date
+            data_type_entries.sort(key=lambda x: datetime.strptime(x["date"], "%d.%m.%Y"))
+            
+            output_file = os.path.join(output_dir, f"weather_scraped_{data_type}.csv")
+            with open(output_file, mode='w', newline='', encoding='utf-8') as file:
+                writer = csv.DictWriter(file, fieldnames=["date", "value", "data_type"])
+                writer.writeheader()
+                writer.writerows(data_type_entries)
+                print(f"Saved {len(data_type_entries)} entries to {output_file}")
+        else:
+            print(f"No data was scraped for {data_type}.")
