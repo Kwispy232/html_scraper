@@ -1,8 +1,8 @@
 import pandas as pd
 
 def data_prep():
-    df = pd.read_csv('/Users/sebastianmraz/html_scraper/scraped_entries.csv')
-    dates = pd.to_datetime(df['datum'], format='%d. %m. %Y')
+    df = pd.read_csv('/Users/sebastianmraz/html_scraper/legislation/scraped_legislation.csv')
+    dates = pd.to_datetime(df['datum'], format='%d.%m.%Y')
     unique_dates = pd.date_range(start=dates.min(), end=dates.max()).tolist()
     print(f"Unique dates: {len(unique_dates)}")
     data = []

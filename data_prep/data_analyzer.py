@@ -5,7 +5,7 @@ def data_analyzer():
     print("Data Analyzer is running...")
     
     # Read the CSV file
-    df = pd.read_csv('/Users/sebastianmraz/html_scraper/unique_dates_counts.csv')
+    df = pd.read_csv('/Users/sebastianmraz/html_scraper/legislation/unique_dates_counts.csv')
     
     # Ensure the 'Date' column is in datetime format
     df['date'] = pd.to_datetime(df['date'])
